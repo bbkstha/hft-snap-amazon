@@ -1,4 +1,3 @@
-
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.ml.recommendation.ALS
@@ -21,24 +20,24 @@ import org.apache.spark.sql.SparkSession
 
       val spark = SparkSession
         .builder()
-        .appName("ALS Test")
-        .master("local")
+        .appName("ALS_Train")
+        .master("spark://boise:31720")
         .getOrCreate()
       import spark.implicits._
 
-      val ratingCSV = "/home/bbkstha/CSU/I/Big Data/Project/data/ratings_Digital_Music.csv"
-      val destinationFile = "/home/bbkstha/CSU/I/Big Data/Project/data/SavedModel"
+
+      val execStart = System.currentTimeMillis()
+      val fileName =args.apply(0)
+      val ratingCSV = "hdfs://boise:31701/ "+fileName+".txt"
+      val savedModelFile = "hdfs://boise:31701/"+fileName+"SavedModel.txt"
 
 
       val oldRatings = spark.read.textFile(ratingCSV).map(parseRating).toDF()
 
-      val data = spark.read.textFile(ratingCSV)
-
-
-
-      val tempRating = data.map(_.split(',') match { case Array(userId, itemId, rating, timestamp) =>
-        NewRatingClass(userId.toString, itemId.toString, rating.toDouble, timestamp.toLong)
-      })
+      //val data = spark.read.textFile(ratingCSV)
+      //val tempRating = data.map(_.split(',') match { case Array(userId, itemId, rating, timestamp) =>
+      //NewRatingClass(userId.toString, itemId.toString, rating.toDouble, timestamp.toLong)
+      //})
 
       val stringindexer = new StringIndexer()
         .setInputCol("userId")
@@ -52,38 +51,23 @@ import org.apache.spark.sql.SparkSession
         .setOutputCol("itemNumber")
       val modelc1 = stringindexer1.fit(newdf0)
       val  df1 = modelc1.transform(newdf0)
-      val newdf1 = df1.drop("itemId").drop("timestamp")
-
-
-      val ratings = newdf1//.as[Ratings]
-
-
-
-    //ratings.show()
-
+      val ratings = df1.drop("itemId").drop("timestamp")
 
       val Array(training, test) = ratings.randomSplit(Array(0.8, 0.2))
-      //training.show()
-      //test.show()
 
       // Build the recommendation model using ALS on the training data
       val als = new ALS()
-        .setMaxIter(2)
+        .setMaxIter(10)
         .setRegParam(0.01)
         .setUserCol("userNumber")
         .setItemCol("itemNumber")
         .setRatingCol("rating")
       val model = als.fit(training)
-//
-//
-//      // Evaluate the model by computing the RMSE on the test data
-//      // Note we set cold start strategy to 'drop' to ensure we don't get NaN evaluation metrics
+
+      // Evaluate the model by computing the RMSE on the test data
+      // Note we set cold start strategy to 'drop' to ensure we don't get NaN evaluation metrics
       model.setColdStartStrategy("drop")
       val predictions = model.transform(test)
-
-      predictions.show();
-
-
       val evaluator = new RegressionEvaluator()
         .setMetricName("rmse")
         .setLabelCol("rating")
@@ -94,17 +78,14 @@ import org.apache.spark.sql.SparkSession
 
       /*******************************************************************/
 
-      // Generate top 10 movie recommendations for each user
-      val userRecs = model.recommendForAllUsers(10)
-     // userRecs.show()
-      // Generate top 10 user recommendations for each movie
-      val movieRecs = model.recommendForAllItems(10)
-     // movieRecs.show()
+      // Save and load model
+      model.save(savedModelFile)
+      //val sameModel = MatrixFactorizationModel.load(spark.sparkContext, destinationFile)
+
+      val execTime = (System.currentTimeMillis() - execStart)/60000.0
+      println("The execution time is: "+execTime)
       spark.stop()
 
-
     }
-
-  // scalastyle:on println
 
 }
