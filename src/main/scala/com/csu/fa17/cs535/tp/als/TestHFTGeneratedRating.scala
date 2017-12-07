@@ -34,7 +34,7 @@ object TestHFTGeneratedRating {
 
     val execStart = System.currentTimeMillis()
     //val fileName =args.apply(0)
-    val ratingCSV = "/home/bbkstha/CSU/I/BigData/Project/data/Musical_Instruments_5.csv/1.csv"//"hdfs://boise:31701/ "+fileName+".txt"
+    val ratingCSV = "/home/bbkstha/CSU/I/BigData/Project/data/SnapData/Rating/ratings_Electronics.csv"//"hdfs://boise:31701/ "+fileName+".txt"
     //val savedModelFile = "hdfs://boise:31701/"+fileName+"SavedModel.txt"
 
 
@@ -59,10 +59,11 @@ object TestHFTGeneratedRating {
     val  df1 = modelc1.transform(newdf0)
     val ratings = df1.drop("itemId").drop("timestamp")
 
-    val Array(training, test) = ratings.randomSplit(Array(0.8, 0.1))
+    val Array(training, test) = ratings.randomSplit(Array(0.8, 0.2))
 
     // Build the recommendation model using ALS on the training data
     val als = new ALS()
+      .setRank(50)
       .setMaxIter(10)
       .setRegParam(0.01)
       .setUserCol("userNumber")
@@ -78,7 +79,7 @@ object TestHFTGeneratedRating {
       .setMetricName("mse")
       .setLabelCol("rating")
       .setPredictionCol("prediction")
-    val mse = evaluator.evaluate(predictions)
+    val mse = evaluator.evaluate(predictions)/10
     println(s"Mean-square error = $mse")
 
 

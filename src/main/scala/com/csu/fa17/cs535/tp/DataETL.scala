@@ -9,6 +9,11 @@ object HFTMain {
 
     def main(args: Array[String]) {
 
+
+      val fileLocation = "/home/bbkstha/CSU/I/BigData/Project/data/SnapData/Review/Uncleaned/"
+      val fileName = "Electronics"
+      val saveDataforHFT = "/home/bbkstha/CSU/I/BigData/Project/data/SnapData/Review/CleanforHFT"
+
       val spark = SparkSession
         .builder()
         .appName("ALS_Train")
@@ -16,14 +21,14 @@ object HFTMain {
         .getOrCreate()
       import spark.implicits._
 
-      val rawData = spark.read.json("/home/bbkstha/CSU/I/BigData/Project/data/Musical_Instruments_5.json").toDF();
-      rawData.show(5)
+      val rawData = spark.read.json(fileLocation+fileName+".json").toDF();
+      //rawData.show(5)
 
-      val schemaString = "userID itemID rating time wordCount reviewText"
-      // Generate the schema based on the string of schema
-      val fields = schemaString.split(" ")
-        .map(fieldName => StructField(fieldName, StringType, nullable = true))
-      val schema = StructType(fields)
+//      val schemaString = "userID itemID rating time wordCount reviewText"
+//      // Generate the schema based on the string of schema
+//      val fields = schemaString.split(" ")
+//        .map(fieldName => StructField(fieldName, StringType, nullable = true))
+//      val schema = StructType(fields)
 
 
       val x = rawData.map(r=>(r.apply(5).toString,
@@ -34,7 +39,7 @@ object HFTMain {
                               r.apply(3).toString.replaceAll("[^a-zA-Z]", " "))).toDF()
 
 
-        val b = x.map(c=>(c.apply(0).toString+" "+c.apply(1).toString+" "+c.apply(2).toString+" "+c.apply(3).toString
+      val hftDataFormat = x.map(c=>(c.apply(0).toString+" "+c.apply(1).toString+" "+c.apply(2).toString+" "+c.apply(3).toString
                   +" "+c.apply(4).toString+" "+c.apply(5).toString))
 
       val rawDataForALS =  x.map(c=>(c.apply(0).toString, c.apply(1).toString, c.apply(2).toString, c.apply(3).toString)).toDF()
@@ -43,7 +48,7 @@ object HFTMain {
       //rawDataForALS.coalesce(1).write.format("com.databricks.spark.csv").option("header", "false").save("/home/bbkstha/CSU/I/BigData/Project/data/Musical_Instruments_5.csv")
 
 
-      b.coalesce(1).write.text("/home/bbkstha/CSU/I/BigData/Project/data/Musical_Instruments_5_NEW.txt");
+      hftDataFormat.coalesce(1).write.text(saveDataforHFT+fileName+".txt");
       //x.show(5)
 
 
